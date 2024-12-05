@@ -108,7 +108,7 @@ function [x, info, options] = RieMARS_AdamW(problem, x, options)
 
     % Define the scheduler
     if strcmp(options.scheduler, 'fixed')
-        lr = @(initial_lr, current_iter, max_iter) cosine_lr(initial_lr, current_iter, max_iter);
+        lr = @(initial_lr, current_iter, max_iter) cosine_lr(initial_lr, current_iter, max_iter);  % This gets overwritten
     elseif strcmp(options.scheduler, 'cosine')
         lr = @(initial_lr, current_iter, max_iter) cosine_lr(initial_lr, current_iter, max_iter);
     elseif strcmp(options.scheduler, 'linear')
@@ -156,10 +156,10 @@ function [x, info, options] = RieMARS_AdamW(problem, x, options)
 
         % Compute c_t = grad + coeff * grad_diff
         coeff = options.gamma * (options.beta1 / (1 - options.beta1));
-        c_t = grad + (grad_diff * coeff);
-        % c_t = problem.M.lincomb(x, 1, grad, coeff, grad_diff);
+        % c_t = grad + (grad_diff * coeff);
+        c_t = problem.M.lincomb(x, 1, grad, coeff, grad_diff);
         c_t_norm_sq = problem.M.norm(x, c_t)^2;
-        % c_t = grad;
+        assert(c_t_norm_sq >= 0, 'Squared norm of c_t is negative: %.6e', c_t_norm_sq);
 
         % c_t_norm = problem.M.norm(x, c_t);
         % if c_t_norm > 1
@@ -168,10 +168,6 @@ function [x, info, options] = RieMARS_AdamW(problem, x, options)
 
         % Update biased first moment estimate (exp_avg)
         exp_avg = problem.M.lincomb(x, options.beta1, exp_avg, (1 - options.beta1), c_t);
-
-        % Compute the squared norm of c_t
-        % c_t_norm_sq = problem.M.norm(x, c_t);
-        % assert(c_t_norm_sq >= 0, 'Squared norm of c_t is negative: %.6e', c_t_norm_sq);
 
         % Update biased second moment estimate (scalar)
         % exp_avg_sq = problem.M.lincomb(x, options.beta2, exp_avg_sq, (1 - options.beta2), c_t_norm_sq);
@@ -182,9 +178,7 @@ function [x, info, options] = RieMARS_AdamW(problem, x, options)
         bias_correction2 = 1 - options.beta2^iter;
 
         exp_avg_hat = problem.M.lincomb(x, 1 / bias_correction1, exp_avg);
-        % exp_avg_hat = exp_avg;
         exp_avg_sq_hat = exp_avg_sq / bias_correction2;
-        % exp_avg_sq_hat = exp_avg_sq;
 
         % Compute the deinator (scalar)
         denom = sqrt(exp_avg_sq_hat) + options.epsilon;
@@ -194,8 +188,8 @@ function [x, info, options] = RieMARS_AdamW(problem, x, options)
         end
 
         % Compute update direction
-        scaled_grad = exp_avg_hat /denom;
-        % scaled_grad = problem.M.lincomb(x, 1, exp_avg_hat, 0, 0) ./ denom;
+        % scaled_grad = exp_avg_hat /denom;
+        scaled_grad = problem.M.lincomb(x, 1/denom, exp_avg_hat);
 
         % Apply weight decay (if any)
         if options.weight_decay ~= 0
@@ -295,7 +289,7 @@ function [x, info, options] = RieMARS_AdamW(problem, x, options)
     end
 
     function lr = cosine_lr(initial_lr, current_iter, max_iter)
-        lr = initial_lr * 1 * (1 + cos(pi * current_iter / max_iter))^2 * exp(-log(2)/max_iter * current_iter);
+        lr = initial_lr * 0.5 * (1 + cos(pi * current_iter / max_iter));
     end
 
     function lr = linear_lr(initial_lr, current_iter, max_iter)

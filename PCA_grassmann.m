@@ -168,7 +168,7 @@ function PCA_grassmann()
     options.beta2 = 0.999;
     options.epsilon = 1e-12;
     options.weight_decay = 0.0;
-    options.gamma = 0.005;
+    options.gamma = 0.025;
     % options.transport = 'ret_vector';
     [~, infos_marsadamw, ~] = RieMARS_AdamW(problem, Uinit, options);
     disp(f_sol)
