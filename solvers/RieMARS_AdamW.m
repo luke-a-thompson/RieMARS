@@ -189,7 +189,7 @@ function [x, info, options] = RieMARS_AdamW(problem, x, options)
 
         % Compute update direction
         % scaled_grad = exp_avg_hat /denom;
-        scaled_grad = problem.M.lincomb(x, 1/denom, exp_avg_hat);
+        scaled_grad = problem.M.lincomb(x, 1./denom, exp_avg_hat);
 
         % Apply weight decay (if any)
         if options.weight_decay ~= 0
